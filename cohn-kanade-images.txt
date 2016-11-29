@@ -1,0 +1,16 @@
+{0:'neutral', 1:'anger', 2:'contempt', 3:'disgust', 4:'fear', 5:'happy', 6:'sadness', 7:'surprise'}
+
+Total Images: 10806
+Image with Emotion Clasification :  5876
+
+
+(threshold of 30 percent)
+
+neutral  =  1313  (1051 131 131)
+anger    =   775  (621  77  77)
+contempt =   186  (150  18  18)
+disgust  =   689  (553  68  68)
+fear     =   417  (335  41  41)
+happy    =  1030  (824  103 103)
+sadness  =   420  (336  42  42)
+surprise =  1046  (838  104 104 )
