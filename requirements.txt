@@ -1,0 +1,7 @@
+numpy==1.11.2
+h5py==2.6.0
+Keras==1.1.1
+tensorflow==0.11.0
+Theano==0.8.2
+opencv-python==3.1.0.3
+
