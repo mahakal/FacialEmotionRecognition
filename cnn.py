@@ -8,6 +8,7 @@ from keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
 from keras import backend as K
 
+# TODO: arg parse for
 batch_size = 30
 nb_classes = 8
 nb_epoch = 5
@@ -64,7 +65,7 @@ model.add(Dropout(0.5))
 model.add(Dense(nb_classes))
 model.add(Activation('softmax'))
 
-#compiling the model 
+#compiling the model
 model.compile(loss='categorical_crossentropy',
               optimizer='adadelta',
               metrics=['accuracy'])
