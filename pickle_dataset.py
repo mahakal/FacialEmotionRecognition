@@ -35,7 +35,7 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument('dataset_path', help='Absolute Path of the CK+ Dataset')
-parser.add_argument('-o', '--outfile', default='ck_dataste.pickle',
+parser.add_argument('-o', '--outfile', default='ck_dataset.pickle',
                     help='Name of the output pickle file')
 parser.add_argument('-t', '--training', dest='training_size', type=int, default=80,
                     help='Percent of dataset to use for Training')
@@ -43,131 +43,98 @@ parser.add_argument('-v', '--validation', dest='validation_size', type=int,
                     default=10, help='Percent of dataset to use for Validation')
 parser.add_argument('-test', '--test', dest='testing_size', type=int, default=10,
                     help='Percent of dataset to use for Testing')
-parser.add_argument('--extractFace', dest='face_detect', type=int, default=10,
+parser.add_argument('--extractFace', dest='detect_face', action="store_true",
                     help='Crop and save face in the img')
 parser.add_argument('--resize', nargs=2, type=int, default=[100, 100],
-                    help='Resize image to paticular dimensions')
+                    help='Resize image to paticular dimensions (w x h) ')
 
-[dataset_path, outfile, training_size, validation_size, testing_size, face_detect, resize] = vars(parser.parse_args()).values()
+[dataset_path, outfile, training_size, validation_size, testing_size, detect_face, resize] = vars(parser.parse_args()).values()
+resize = tuple(resize)
 
 if training_size + validation_size + testing_size != 100:
     raise  argparse.ArgumentTypeError(
         "Training Size, Validation Size, Testing Size should be equal be 100"
     )
 
-face_cascade = cv2.CascadeClassifier('./haarcascade_frontalface_default.xml')
+if not os.path.exists(dataset_path):
+    raise IOError('No such file or directory', dataset_path)
 
-def detect_face_and_resize(imgpath):
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+ck_dataset = 8 * [[]]
+
+
+def detect_face_resize(imgpath):
     img = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
-    faces = face_cascade.detectMultiScale(img, 1.25, 5)
-    c = 1.25
-    while not len(faces):
-        faces = face_cascade.detectMultiScale(img, c, 5)
-        c -= .05
-        if c <= 1:
-            print(imgpath) # Change parameters of detectMultiScale or manually crop the image
-            break
-    for (x,y,w,h) in faces:
-        # TODO argparse height and width of the images
-        cv2.imwrite(imgpath, cv2.resize(img[y:y+h, x:x+w], (100,100), interpolation = cv2.INTER_AREA))
-
-# Python directory traverser
-def trav_dir_1(dirpath):
-    os.chdir(dirpath)
-    dir_list = os.listdir()
-
-    #travers current directory and if directoy found call itself
-    for x in dir_list:
-        if(os.path.isdir(x)):
-            trav_dir(x)
-        #imghdr.what return mime type of the image
-        elif(imghdr.what(x) in ['png']): # why in used why not ==
-            detect_face_and_resize(x)
-
-    #reached directory with no directory
-    os.chdir('./..')
-
-ck_dataset = {
-    'neutral_img': [],
-    'anger_img': [],
-    'contempt_img': [],
-    'disgust_img': [],
-    'fear_img': [],
-    'happy_img': [],
-    'sadness_img': [],
-    'surprise_img': [],
-}
-
-'''
-traverse directory tree if a directory found with
-image then find if .txt file exist if exist and
-start collecting data
-'''
-def load_data(list):
-    global ck_dataset
-    if any(".txt" in s for s in list): #check whether directory have emotion label
-
-        threshold = math.floor( (len(list)-1)*0.3) #how many pictures be considered neutral in directory
-
-        for x in list: #find emotion label and read it
-            if ".txt" in x:
-                with open(x, 'rb') as text_file:
-                    text = int(float(text_file.readline()))
+    if detect_face:
+        faces = face_cascade.detectMultiScale(img, 1.25, 5)
+        c = 1.25
+        while not len(faces):
+            faces = face_cascade.detectMultiScale(img, c, 5)
+            c -= .05
+            if c <= 1:
+                print(imgpath) # Change parameters of detectMultiScale or manually crop the image
                 break
+        for (x,y,w,h) in faces:
+            cv2.imwrite(imgpath, cv2.resize(img[y:y+h, x:x+w], resize, interpolation = cv2.INTER_AREA))
+    else:
+        cv2.imwrite(imgpath, cv2.resize(img, resize, interpolation = cv2.INTER_AREA))
 
-        for x in list:
-            if imghdr.what(x) in ['png']: #Makes sure file is .png image
-                img = cv2.imread(x,cv2.IMREAD_GRAYSCALE).flatten() #changes image matrix to single dimension in a row major fashion
-                img = (img/25500).astype(np.float32) # normalization of data [for sigmoid neurons(0-1)]
-                if int(x[10:-4]) <= threshold: #Image name are of type 'S005_001_00000002.png' looks at the part '00000002'
-                    ck_dataset['neutral_img'].append(img)
-                else:
-                    # maybe use a switch or something
-                    if(text == 1):
-                        ck_dataset['anger_img'].append(img)
-                    elif(text == 2):
-                        ck_dataset['contempt_img'].append(img)
-                    elif(text == 3):
-                        ck_dataset['disgust_img'].append(img)
-                    elif(text == 4):
-                        ck_dataset['fear_img'].append(img)
-                    elif(text == 5):
-                        ck_dataset['happy_img'].append(img)
-                    elif(text == 6):
-                        ck_dataset['sadness_img'].append(img)
-                    elif(text == 7):
-                        ck_dataset['surprise_img'].append(img)
-'''
-  same code as in haar_apply.py but only break statement
-  after the execution of elif becuase once we reache
-  the direcory with images we will process all the
-  image in directoy with function load_data()
-'''
-def trav_dir(dirpath):
-    os.chdir(dirpath)
-    dir_list = os.listdir()
+def trav_dir(dataset_path):
+    gen = os.walk(dataset_path)
+    next(gen)
+    # for creating seprate directory with
+    # prefix = "_copy"
+    # while(!os.path.exists(dataset_path + prefix)):
+    #     prefix += "_copy"
+    # os.mkdir(dataset_path + prefix)
+    for root, dirs, files in gen:
+        # os.mkdir(os.path.join(dataset_path + prefix, files))
+        for file in files:
+            if(imghdr.what(os.path.join(root, file)) in ['png']): # why in used why not ==
+                detect_face_resize(os.path.join(root, file))
 
-    #travers current directory and if directoy found, call itself
-    for x in dir_list:
-      if(os.path.isdir(x)):
-        trav_dir(x)
-      #imghdr.what return mime type of the image
-      elif(imghdr.what(x) in ['png']):
-        load_data(dir_list)
-        break
+def crop_and_resize(dataset_path):
+    trav_dir(dataset_path)
 
-    #reached directory with no directory
-    os.chdir('./..')
+def load_data(files_path):
+    global ck_dataset
+
+    threshold = math.floor( (len(files_path)-1)*0.3) #how many pictures be considered neutral in directory
+
+    for file in files_path: #find emotion label and read it
+        if ".txt" in file:
+            with open(file, 'rb') as text_file:
+                emotion_label = int(float(text_file.readline()))
+            break
+
+    for file in files_path:
+        if imghdr.what(file) in ['png']: #Makes sure file is .png image
+            img = cv2.imread(file,cv2.IMREAD_GRAYSCALE).flatten() #changes image matrix to single dimension in a row major fashion
+            img = (img/25500).astype(np.float32) # normalization of data [for sigmoid neurons(0-1)]
+            if int(file[-12:-4]) <= threshold: #Image name are of type 'S005_001_00000002.png' looks at the part '00000002'
+                ck_dataset[0].append(img)
+            else:
+                ck_dataset[emotion_label].append(img)
+
+def trav_dir_1(dataset_path):
+    gen = os.walk(dataset_path)
+    next(gen)
+    # for creating seprate directory with
+    # prefix = "_copy"
+    # while(!os.path.exists(dataset_path + prefix)):
+    #     prefix += "_copy"
+    # os.mkdir(dataset_path + prefix)
+    for root, dirs, files in gen:
+        # os.mkdir(os.path.join(dataset_path + prefix, files))
+        if not any(".txt" in file for file in files): #check whether directory have emotion label
+            continue
+        files_path = []
+        for file in files:
+            files_path.append(os.path.join(root, file))
+        load_data(files_path)
 
 def pack_data():
     global ck_dataset
-    # TODO some other way of doing this
-    biglist = [
-        ck_dataset['neutral_img'], ck_dataset['anger_img'],
-        ck_dataset['contempt_img'], ck_dataset['disgust_img'],
-        ck_dataset['fear_img'], ck_dataset['happy_img'],
-        ck_dataset['sadness_img'], ck_dataset['surprise_img']
-    ]
 
     training_data = []
     validation_data = []
@@ -177,33 +144,32 @@ def pack_data():
     validation_txt = []
     test_txt = []
 
-    # use ck_dataset
-    for x,y in zip(biglist,range(0,8)):
-        length = len(x)
-        # TODO: Some refactoring here
-        training_data.append(x[0:math.ceil(length*0.8)] ) #80 percent Image of each emotion for training
-        training_txt.append(y*np.ones(shape=(len(x[0:math.ceil(length*0.8)]),1),dtype=np.int8)) #Generating Corresponding Label
+    for x,y in zip(ck_dataset,range(0,8)):
+        i1, i2 = math.ceil(len(x)*0.8), math.floor(len(x)*0.9)
 
-        validation_data.append(x[math.ceil(length*0.8):math.floor(length*0.9)]) #10 percent
-        validation_txt.append(y*np.ones(shape=(len(x[math.ceil(length*0.8):math.floor(length*0.9)]),1),dtype=np.int8))
+        training_data.append(x[0:i1])       #80 percent Image of each emotion for training
+        validation_data.append(x[i1:i2])    #10 percent
+        test_data.append(x[i2:len(x)])      #10 percent
 
-        test_data.append(x[math.floor(length*0.9):length]) #10 percent
-        test_txt.append(y*np.ones(shape=(len(x[math.floor(length*0.9):length]),1),dtype=np.int8))
+        training_txt.append(y*np.ones(shape=(len(x[0:i1]),1), dtype=np.int8)) #Generating Corresponding Label
+        validation_txt.append(y*np.ones(shape=(len(x[i1:i2]),1), dtype=np.int8))
+        test_txt.append(y*np.ones(shape=(len(x[i2:len(x)]),1), dtype=np.int8))
 
-    training_data = np.vstack( training_data) #np.vstack(list_of_array) converts the list_of_numpy_arrays into a single numpy array
-    validation_data = np.vstack( validation_data)
-    test_data = np.vstack( test_data)
+    #np.vstack(list_of_array) converts the list_of_numpy_arrays into a single numpy array
+    training_data, validation_data, test_data = np.vstack(training_data), np.vstack(validation_data), np.vstack(test_data)
+    training_txt, validation_txt, test_txt = np.vstack(training_txt), np.vstack(validation_txt), np.vstack(test_txt)
 
-    training_txt = np.vstack( training_txt)
-    validation_txt = np.vstack( validation_txt)
-    test_txt = np.vstack( test_txt)
-    # TODO highest protocol
-    # TODO pickle metadata: img_rows, img_cols
-    pickle.dump([[ training_data, training_txt],[ validation_data, validation_txt],[ test_data, test_txt]], open( outfile,'wb'))
+    with open(outfile, 'wb') as f:
+        pickle.dump({
+            "training_data"   : [ training_data, training_txt],
+            "validation_data" : [ validation_data, validation_txt],
+            "test_data"       : [ test_data, test_txt],
+            "img_dim"         : {"width": resize[0], "height": resize[1]}
+        }, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 def serialize_CK(dataset_path):
-    trav_dir(dataset_path) #name of the directory
+    trav_dir_1(dataset_path) #name of the directory
     pack_data()
 
-trav_dir_1(dataset_path)
+crop_and_resize(dataset_path)
 serialize_CK(dataset_path)

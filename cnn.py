@@ -13,8 +13,6 @@ batch_size = 30
 nb_classes = 8
 nb_epoch = 5
 
-# input image dimensions
-img_rows, img_cols = 100, 100
 # number of convolutional filters to use
 nb_filters = 64
 # size of pooling area for max pooling
@@ -23,8 +21,12 @@ pool_size = (4, 4)
 kernel_size = (5, 5)
 
 # the data, shuffled and split between train and test sets
-(training_data, validation_data, test_data) = pickle.load(open('ncohn_dataset.p','rb'))
+data_obj = pickle.load(open('ncohn_dataset.p','rb'))
+(training_data, validation_data, test_data) = data_obj['training_data'], data_obj['validation_data'], data_obj['test_data']
 (X_train, y_train), (X_test, y_test) = (training_data[0],training_data[1]),(test_data[0],test_data[1])
+
+# input image dimensions
+img_rows, img_cols = data_obj['img_dim']['width'], data_obj['img_dim']['height']
 
 #ckecks if backend is theano or tensorflow for dataset format
 if K.image_dim_ordering() == 'th':
