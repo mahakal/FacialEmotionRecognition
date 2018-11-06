@@ -1,7 +1,7 @@
 # Facial-Emotion-Recoginiton
- 
-## Overview 
-Using Extended Cohn-Kanade AU-Coded Facial Expression Database to classify basic human facial emotion expressions using ann
+
+## Overview
+Using Extended Cohn-Kanade AU-Coded Facial Expression Database to classify basic human facial emotion expressions using ann.
 
 ## Installation
 
@@ -13,15 +13,15 @@ pip3 install -r requirements.txt
 
 ## Usage
 
-If you want a facial emotion classifier you can just download the Cohn-Kanade database and serialize the dataset according to your need and if you can you should also use another dataset with ck.
+If you want a facial emotion classifier you can just download the Cohn-Kanade dataset and serialize the dataset according to your need and if you can you should also use another dataset with ck for better results.
 
-apply_haar\_cascade.py => To apply the haar cascade for face detection it will overwrite the directory with 100x100 pixels images of faces. If face couldn't be detected then print the filename to console.
+pickle_dataset.py => Script for processing and Serializing dataset.
+  python pickle_dataset.py -h
 
-pickle_dataset.py => Pickles the dataset containing 100*100 images of faces
+cnn.py => Convolution Neural Network to train the the classifier.
+  python cnn.py -h
 
-cnn.py => Convolution neural Network to train the the classifier 
-
-cohn-kanade-images.txt => contains some basic info about the dataset
+cohn-kanade-images.txt => Contains some basic info about the dataset.
 
 ## Credits
 - Kanade, T., Cohn, J. F., & Tian, Y. (2000). Comprehensive database for facial expression analysis. Proceedings of the Fourth IEEE International Conference on Automatic Face and Gesture Recognition (FG'00), Grenoble, France, 46-53.

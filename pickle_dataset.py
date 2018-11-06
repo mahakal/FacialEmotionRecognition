@@ -9,10 +9,12 @@ import numpy as np
 import argparse
 
 '''
-CK+ Dataset contains multile directory.
-Most of this directory's contain set of images and a text file.
+CK+ Dataset contains multiple directory.
+Most of this directory's contain a set of images and a text file.
 The Images are of actor's face, from their normal face till a particular emotion.
 The text file contains a emotional label(a number) for the particular emotion.
+Emotion Label for corresponding Emotional Expression
+0:'neutral', 1:'anger', 2:'contempt', 3:'disgust', 4:'fear', 5:'happy', 6:'sadness', 7:'surprise'
 '''
 
 if __name__ != '__main__':
@@ -25,8 +27,8 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     epilog='''
         Examples:
-            python %(prog)s /home/user/datasets/ck_dataset --extractFace
-            python %(prog)s /home/user/datasets/ck_dataset --outfile face_datset.pickle
+            python %(prog)s /home/user/datasets/ck_dataset --crop
+            python %(prog)s /home/user/datasets/ck_dataset --outfile ck_dataset.pickle
             python %(prog)s /home/user/datasets/ck_dataset --training 70 --validation 20 --test 10
             python %(prog)s /home/user/datasets/ck_dataset -t 70 -v 20 -test 10 -o fd.pickle
 
@@ -48,7 +50,7 @@ parser.add_argument('--crop', dest='detect_face', action="store_true",
 parser.add_argument('--resize', nargs=2, type=int, default=[100, 100],
                     help='Resize image to paticular dimensions (w x h) ')
 
-[dataset_path, outfile, training_size, validation_size, testing_size, detect_face, resize] = vars(parser.parse_args()).values()
+dataset_path, outfile, training_size, validation_size, testing_size, detect_face, resize = vars(parser.parse_args()).values()
 
 if training_size + validation_size + testing_size != 100:
     raise  argparse.ArgumentTypeError(
@@ -60,8 +62,6 @@ if not os.path.exists(dataset_path):
 
 training_size, validation_size, testing_size, resize = training_size/100, validation_size/100, testing_size/100, tuple(resize)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-# Emotion Label for corresponding Emotional Expression
-# 0:'neutral', 1:'anger', 2:'contempt', 3:'disgust', 4:'fear', 5:'happy', 6:'sadness', 7:'surprise'
 ck_dataset = 8 * [[]]
 
 def detect_face_resize(imgpath):
@@ -74,7 +74,7 @@ def detect_face_resize(imgpath):
             scale_factor -= .05
             if scale_factor <= 1:
                 print(imgpath) # Change parameters of detectMultiScale or manually crop the image
-                break
+                return
         for (x,y,w,h) in faces:
             return cv2.resize(img[y:y+h, x:x+w], resize, interpolation = cv2.INTER_AREA)
     else:
@@ -94,8 +94,10 @@ def load_data(files_path):
     for file in files_path:
         if imghdr.what(file) in ['png']: #Makes sure file is .png image
             img = detect_face_resize(file)
+            if img is None:
+                continue
             img = img.flatten()
-            img = (img/25500).astype(np.float32) # normalization of data [for sigmoid neurons(0-1)]
+            img = (img/max(img)).astype(np.float32) # normalization of data [for sigmoid neurons(0-1)]
             if int(file[-12:-4]) <= threshold: #Image name are of type 'S005_001_00000002.png' looks at the part '00000002'
                 ck_dataset[0].append(img)
             else:

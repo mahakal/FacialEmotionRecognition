@@ -1,6 +1,23 @@
 import pickle
 import numpy as np
-np.random.seed(1337)  # for reproducibility
+import argparse
+
+if __name__ != '__main__':
+    raise ImportError('Should be run as Script')
+
+parser = argparse.ArgumentParser(
+    description='''
+        Convolutional Neural Netwok for training a facial emotion classifier.
+    ''',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    epilog='''
+        Examples:
+            python %(prog)s /path/to/ck_dataset.pickle
+    '''
+)
+parser.add_argument('dataset_path', help='Absolute Path of the pickled CK+ Dataset')
+
+dataset_path = parser.parse_args().dataset_path
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
@@ -8,7 +25,6 @@ from keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
 from keras import backend as K
 
-# TODO: arg parse for
 batch_size = 30
 nb_classes = 8
 nb_epoch = 5
@@ -21,7 +37,9 @@ pool_size = (4, 4)
 kernel_size = (5, 5)
 
 # the data, shuffled and split between train and test sets
-data_obj = pickle.load(open('ck_dataset.pickle','rb'))
+with open(dataset_path, 'rb') as pickled_dataset:
+    data_obj = pickle.load(pickled_dataset)
+    
 (training_data, validation_data, test_data) = data_obj['training_data'], data_obj['validation_data'], data_obj['test_data']
 (X_train, y_train), (X_test, y_test) = (training_data[0],training_data[1]),(test_data[0],test_data[1])
 
