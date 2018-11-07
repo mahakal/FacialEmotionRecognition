@@ -39,9 +39,9 @@ kernel_size = (5, 5)
 # the data, shuffled and split between train and test sets
 with open(dataset_path, 'rb') as pickled_dataset:
     data_obj = pickle.load(pickled_dataset)
-    
+
 (training_data, validation_data, test_data) = data_obj['training_data'], data_obj['validation_data'], data_obj['test_data']
-(X_train, y_train), (X_test, y_test) = (training_data[0],training_data[1]),(test_data[0],test_data[1])
+(X_train, y_train), (X_test, y_test) = (training_data[0],training_data[1]), (test_data[0],test_data[1])
 
 # input image dimensions
 img_rows, img_cols = data_obj['img_dim']['width'], data_obj['img_dim']['height']

@@ -62,7 +62,7 @@ if not os.path.exists(dataset_path):
 
 training_size, validation_size, testing_size, resize = training_size/100, validation_size/100, testing_size/100, tuple(resize)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-ck_dataset = 8 * [[]]
+ck_dataset = [[], [], [], [], [], [], [], []]
 
 def detect_face_resize(imgpath):
     img = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
