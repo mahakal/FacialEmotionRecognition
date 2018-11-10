@@ -9,8 +9,9 @@ import numpy as np
 import argparse
 
 '''
-CK+ Dataset contains multiple directory.
-Most of this directory's contain a set of images and a text file.
+CK Dataset contains multiple directory.
+Most of this directory's contain one or more directory's, with each of
+the directory containing a set of images and a text file.
 The Images are of actor's face, from their normal face till a particular emotion.
 The text file contains a emotional label(a number) for the particular emotion.
 Emotion Label for corresponding Emotional Expression
@@ -107,7 +108,7 @@ def trav_dir(dataset_path):
     gen = os.walk(dataset_path)
     next(gen)
     for root, dirs, files in gen:
-        if not any(".txt" in file for file in files): #check whether directory have emotion label
+        if dirs and not any(".txt" in file for file in files): #check whether directory have emotion label
             continue
         files_path = []
         for file in files:
