@@ -1,6 +1,6 @@
-import pickle
-import numpy as np
 import argparse
+import numpy as np
+import pickle
 
 if __name__ != '__main__':
     raise ImportError('Should be run as Script')

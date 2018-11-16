@@ -1,19 +1,21 @@
-import os
-#for imghdr.what to find whether a file is image
-#['pbm','pgm','ppm','png','jpeg','tiff','bmp','webp']
-import imghdr
+import argparse
 import cv2
-import pickle
+import imghdr
 import math
 import numpy as np
-import argparse
+import os
+import pickle
+
 
 '''
-CK Dataset contains multiple directory.
-Most of this directory's contain one or more directory's, with each of
-the directory containing a set of images and a text file.
+Extended CK dataset comprises of Image, Emotion Labels, and related data.
+Extended CK Images Directory contains multiple directory.
+Most of this directory's contain one or more directory's, with each of the
+directory containing a set of images.
 The Images are of actor's face, from their normal face till a particular emotion.
-The text file contains a emotional label(a number) for the particular emotion.
+Extended CK Emotion label has a structure and name convention similar to images
+directory but instead of multiple images it contains a text file.
+The text file contains a emotion label(a number).
 Emotion Label for corresponding Emotional Expression
 0:'neutral', 1:'anger', 2:'contempt', 3:'disgust', 4:'fear', 5:'happy', 6:'sadness', 7:'surprise'
 '''
@@ -26,6 +28,7 @@ parser = argparse.ArgumentParser(
         Serialize\'s CK+ Dataset into pickle format.
     ''',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    # TODO: formating
     epilog='''
         Examples:
             python %(prog)s /home/user/datasets/ck_dataset --crop
@@ -37,7 +40,8 @@ parser = argparse.ArgumentParser(
     '''
 )
 
-parser.add_argument('dataset_path', help='Absolute Path of the CK+ Dataset')
+parser.add_argument('dataset_path', help='Absolute Path of the Extended CK Dataset Images')
+parser.add_argument('label_path', help='Absolute Path of the Extended CK Dataset Emotion Labels')
 parser.add_argument('-o', '--outfile', default='ck_dataset.pickle',
                     help='Name of the output pickle file')
 parser.add_argument('-t', '--training', dest='training_size', type=int, default=80,
@@ -51,7 +55,8 @@ parser.add_argument('--crop', dest='detect_face', action="store_true",
 parser.add_argument('--resize', nargs=2, type=int, default=[100, 100],
                     help='Resize image to paticular dimensions (w x h) ')
 
-dataset_path, outfile, training_size, validation_size, testing_size, detect_face, resize = vars(parser.parse_args()).values()
+dataset_path, label_path, outfile, training_size, validation_size, testing_size, detect_face, resize = vars(parser.parse_args()).values()
+# dataset_path, outfile, training_size, validation_size, testing_size, detect_face, resize = vars(parser.parse_args()).values()
 
 if training_size + validation_size + testing_size != 100:
     raise  argparse.ArgumentTypeError(
@@ -61,40 +66,35 @@ if training_size + validation_size + testing_size != 100:
 if not os.path.exists(dataset_path):
     raise IOError('No such file or directory', dataset_path)
 
+if not os.path.exists(label_path):
+    raise IOError('No such file or directory', label_path)
+
 training_size, validation_size, testing_size, resize = training_size/100, validation_size/100, testing_size/100, tuple(resize)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 ck_dataset = [[], [], [], [], [], [], [], []]
 
-def detect_face_resize(imgpath):
+def load_img(imgpath):
     img = cv2.imread(imgpath, cv2.IMREAD_GRAYSCALE)
     if detect_face:
-        faces = face_cascade.detectMultiScale(img, 1.25, 5)
+        scale_factor = 1.25
+        faces = face_cascade.detectMultiScale(img, scale_factor, 5)
         while not len(faces):
-            scale_factor = 1.20
-            faces = face_cascade.detectMultiScale(img, scale_factor, 5)
             scale_factor -= .05
+            faces = face_cascade.detectMultiScale(img, scale_factor, 5)
             if scale_factor <= 1:
-                print(imgpath) # Change parameters of detectMultiScale or manually crop the image
+                print(imgpath)
                 return
         for (x,y,w,h) in faces:
             return cv2.resize(img[y:y+h, x:x+w], resize, interpolation = cv2.INTER_AREA)
     else:
         return cv2.resize(img, resize, interpolation = cv2.INTER_AREA)
 
-def load_data(files_path):
+def load_img_data(files_path, label):
     global ck_dataset
-
-    threshold = math.floor( (len(files_path)-1)*0.3) #how many pictures be considered neutral in directory
-
-    for file in files_path: #find emotion label and read it
-        if ".txt" in file:
-            with open(file, 'rb') as text_file:
-                emotion_label = int(float(text_file.readline()))
-            break
-
+    threshold = math.floor((len(files_path)-1)*0.3) #how many pictures be considered neutral in directory
     for file in files_path:
         if imghdr.what(file) in ['png']: #Makes sure file is .png image
-            img = detect_face_resize(file)
+            img = load_img(file)
             if img is None:
                 continue
             img = img.flatten()
@@ -102,21 +102,36 @@ def load_data(files_path):
             if int(file[-12:-4]) <= threshold: #Image name are of type 'S005_001_00000002.png' looks at the part '00000002'
                 ck_dataset[0].append(img)
             else:
-                ck_dataset[emotion_label].append(img)
+                ck_dataset[label].append(img)
 
-def trav_dir(dataset_path):
-    gen = os.walk(dataset_path)
-    next(gen)
-    for root, dirs, files in gen:
-        if dirs and not any(".txt" in file for file in files): #check whether directory have emotion label
+def load_emotion_labels(emotion_label_path):
+    labels = dict()
+    for root, dirs, files in os.walk(emotion_label_path):
+        if dirs or not files:
             continue
-        files_path = []
+        id = os.sep.join(root.split(os.sep)[-2:])
         for file in files:
-            files_path.append(os.path.join(root, file))
-        load_data(files_path)
+            f_name = os.path.join(root, file)
+            with open(f_name, 'r') as f:
+                labels[id] = int(float(f.readline()))
+    return labels
 
-def serialize_CK(dataset_path):
-    trav_dir(dataset_path)
+def load_extended_CK(img_path, emotion_label_path):
+    emotion_labels = load_emotion_labels(emotion_label_path)
+    print("\nProcessing: ")
+    for root, dirs, files in os.walk(img_path):
+        if dirs:
+            print(root)
+            continue
+        files_path = [os.path.join(root,file) for file in files]
+        id = os.sep.join(root.split(os.sep)[-2:])
+        if id in emotion_labels:
+            load_img_data(files_path, emotion_labels[id])
+
+def serialize_extended_CK(img_path, emotion_label_path):
+    load_extended_CK(img_path, emotion_label_path)
+
+    print("\nSerializing: ")
 
     training_data = []
     validation_data = []
@@ -149,4 +164,4 @@ def serialize_CK(dataset_path):
             "img_dim"         : {"width": resize[0], "height": resize[1]}
         }, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-serialize_CK(dataset_path)
+serialize_extended_CK(dataset_path, label_path)
